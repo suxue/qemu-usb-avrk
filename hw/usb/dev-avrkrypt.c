@@ -12,6 +12,13 @@
 #include "hw/usb/desc.h"
 #include "sysemu/char.h"
 #include "aes.h"
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+
 
 #define VendorOutRequest ((USB_DIR_OUT|USB_TYPE_VENDOR|USB_RECIP_DEVICE)<<8)
 #define VendorInRequest ((USB_DIR_IN|USB_TYPE_VENDOR|USB_RECIP_DEVICE)<<8)
@@ -23,12 +30,18 @@ do { printf("usb-avrk: " fmt , ## __VA_ARGS__); } while (0)
 #define DPRINTF(fmt, ...) do {} while(0)
 #endif
 
-
 typedef struct {
-    USBDevice dev;
     unsigned char key[16];
     unsigned char buf[16];
     unsigned char outbuf[16];
+    unsigned char led;
+    unsigned char flash;
+} AvrkDeviceState;
+
+typedef struct {
+    USBDevice dev;
+    char *filename;
+    AvrkDeviceState *state;
 } USBAvrkState;
 
 enum {
@@ -119,11 +132,23 @@ static void usb_avrk_handle_control(USBDevice *dev, USBPacket *p,
         return;
 
     switch (request) {
+        case REQ_LED_ON | VendorOutRequest:
+            s->state->led = 1;
+            break;
+        case REQ_LED_OFF | VendorOutRequest:
+            s->state->led = 0;
+            break;
+        case REQ_LED_CTL | VendorOutRequest:
+            if (value)
+                s->state->flash = 1;
+            else
+                s->state->flash = 0;
+            break;
         case REQ_CHANGE_KEY | VendorOutRequest:
-            memcpy(s->key, data, 16);
+            memcpy(s->state->key, data, 16);
             break;
         case REQ_CHANGE_KEY | VendorInRequest:
-            memcpy(data, s->key, 16);
+            memcpy(data, s->state->key, 16);
             p->actual_length = 16;
             break;
         case REQ_UPLOAD_A | VendorOutRequest:
@@ -133,25 +158,26 @@ static void usb_avrk_handle_control(USBDevice *dev, USBPacket *p,
             {
                 request &= 0xff;
                 request -= REQ_UPLOAD_A;
-                memcpy(s->buf + 4 * request, &value, 2);
-                memcpy(s->buf + 4 * request + 2, &index, 2);
+                memcpy(s->state->buf + 4 * request, &value, 2);
+                memcpy(s->state->buf + 4 * request + 2, &index, 2);
                 break;
             }
         case REQ_START_ENCRYPT | VendorOutRequest:
-            AES128_ECB_encrypt(s->buf, s->key, s->outbuf);
+            AES128_ECB_encrypt(s->state->buf, s->state->key, s->state->outbuf);
             break;
         case REQ_DOWNLOAD_A | VendorInRequest:
         case REQ_DOWNLOAD_B | VendorInRequest:
             {
                 request &= 0xff;
                 request -= REQ_DOWNLOAD_A;
-                memcpy(data, s->outbuf + request * 8, 8);
+                memcpy(data, s->state->outbuf + request * 8, 8);
                 p->actual_length = 8;
                 break;
             }
         case REQ_STATUS | VendorInRequest:
             {
-                data[0] = data[1] = 0;
+                data[0] = 0;
+                data[1] = s->state->flash;
                 p->actual_length = 2;
                 break;
             }
@@ -167,6 +193,7 @@ static const VMStateDescription vmstate_usb_avrk = {
 };
 
 static Property avrk_properties[] = {
+    DEFINE_PROP_STRING("filename", USBAvrkState, filename),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -179,8 +206,38 @@ static void usb_avrk_handle_reset(USBDevice *dev)
 
 static int usb_avrk_initfn(USBDevice *dev)
 {
+    static char default_filename[] = "avrk_state";
     USBAvrkState *s = DO_UPCAST(USBAvrkState, dev, dev);
-    memcpy(s->key, "OperatingSystems", 16);
+    struct stat stat;
+    int flash_device = 0;
+    if (!s->filename)
+        s->filename = default_filename;
+
+    int fd = open(s->filename, O_RDWR | O_CREAT, 0644);
+
+    if (fd == -1 || fstat(fd, &stat)) {
+        error_report("%s", strerror(errno));
+        return -1;
+    }
+
+    if (stat.st_size != sizeof(*s->state)) {
+        if (ftruncate(fd, sizeof(*s->state)))
+            goto err;
+        else
+            flash_device = 1;
+    }
+
+    s->state = mmap(NULL, sizeof(*s->state),
+            PROT_WRITE|PROT_READ, MAP_SHARED, fd, 0);
+    if (s->state == MAP_FAILED)
+        goto err;
+
+    close(fd);
+    if (flash_device) {
+        memset(s->state, 0, sizeof(*s->state));
+        memcpy(s->state->key, "OperatingSystems", 16);
+        s->state->flash = 1;
+    }
 
     usb_desc_create_serial(dev);
     usb_desc_init(dev);
@@ -192,10 +249,16 @@ static int usb_avrk_initfn(USBDevice *dev)
         usb_device_attach(dev);
     }
     return 0;
+err:
+    close(fd);
+    error_report("%s", strerror(errno));
+    return -1;
 }
 
 static void usb_avrk_handle_destroy(USBDevice *dev)
 {
+    USBAvrkState *s = (USBAvrkState*)dev;
+    munmap(s->state, sizeof(*s->state));
 }
 
 static void usb_avrk_class_initfn(ObjectClass *klass, void *data)
