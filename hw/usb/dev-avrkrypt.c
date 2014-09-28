@@ -51,32 +51,21 @@ enum {
 };
 
 static const USBDescStrings desc_strings = {
-    [STR_MANUFACTURER]    = "QEMU",
-    [STR_PRODUCT_SERIAL]  = "QEMU AVRK STICK",
-    [STR_SERIALNUMBER]    = "1",
+    [STR_MANUFACTURER]    = "SoCS ANU",
+    [STR_PRODUCT_SERIAL]  = "OpSys A2",
+    [STR_SERIALNUMBER]    = "0",
 };
 
 static const USBDescIface desc_iface0 = {
     .bInterfaceNumber              = 0,
-    .bNumEndpoints                 = 2,
-    .bInterfaceClass               = 0,
+    .bNumEndpoints                 = 0,
+    .bInterfaceClass               = USB_CLASS_VENDOR_SPEC,
     .bInterfaceSubClass            = USB_SUBCLASS_UNDEFINED,
     .bInterfaceProtocol            = 0x00,
-    .eps = (USBDescEndpoint[]) {
-        {
-            .bEndpointAddress      = USB_DIR_IN | 0x01,
-            .bmAttributes          = USB_ENDPOINT_XFER_CONTROL,
-            .wMaxPacketSize        = 64,
-        },{
-            .bEndpointAddress      = USB_DIR_OUT | 0x02,
-            .bmAttributes          = USB_ENDPOINT_XFER_CONTROL,
-            .wMaxPacketSize        = 64,
-        },
-    }
 };
 
 static const USBDescDevice desc_device = {
-    .bcdUSB                        = 0x01, // device version number
+    .bcdUSB                        = 0x0110, // device version number
     .bMaxPacketSize0               = 8,
     .bNumConfigurations            = 1,
     .confs = (USBDescConfig[]) {
@@ -84,7 +73,7 @@ static const USBDescDevice desc_device = {
             .bNumInterfaces        = 1,
             .bConfigurationValue   = 1,
             .bmAttributes          = 0x80,
-            .bMaxPower             = 50,
+            .bMaxPower             = 25,
             .nif = 1,
             .ifs = &desc_iface0,
         },
