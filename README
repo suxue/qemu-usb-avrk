@@ -1,3 +1,4 @@
-Read the documentation in qemu-doc.html or on http://wiki.qemu.org
+We add a virtual usb avr aes128 cryption device against v1.5.3,
 
-- QEMU team
+to watch the patch, visit
+https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff
