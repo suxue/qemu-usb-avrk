@@ -19,6 +19,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+static const char *current_dir;
+
 
 #define VendorOutRequest ((USB_DIR_OUT|USB_TYPE_VENDOR|USB_RECIP_DEVICE)<<8)
 #define VendorInRequest ((USB_DIR_IN|USB_TYPE_VENDOR|USB_RECIP_DEVICE)<<8)
@@ -195,6 +197,12 @@ static void usb_avrk_handle_reset(USBDevice *dev)
 
 static int usb_avrk_initfn(USBDevice *dev)
 {
+#define ERROR_REPORT(msg) do {\
+        error_report("%s:%d: %s:%s", __FILE__, __LINE__, msg, strerror(errno));\
+        return -1; \
+    } while (0)
+#define ERROR_OUT(msg) do { close(fd); ERROR_REPORT(msg); } while (0)
+
     static char default_filename[] = "avrk_state";
     USBAvrkState *s = DO_UPCAST(USBAvrkState, dev, dev);
     struct stat stat;
@@ -202,16 +210,22 @@ static int usb_avrk_initfn(USBDevice *dev)
     if (!s->filename)
         s->filename = default_filename;
 
-    int fd = open(s->filename, O_RDWR | O_CREAT, 0644);
+    if (chdir(current_dir))
+        ERROR_REPORT("chdir");
 
-    if (fd == -1 || fstat(fd, &stat)) {
-        error_report("%s", strerror(errno));
-        return -1;
+    int fd = open(s->filename, O_RDWR | O_CREAT, 0644);
+    if (chdir("/"))
+        ERROR_REPORT("chdir");
+    if (fd == -1) {
+        ERROR_REPORT("open");
     }
+
+    if (fstat(fd, &stat))
+        ERROR_REPORT("fstat");
 
     if (stat.st_size != sizeof(*s->state)) {
         if (ftruncate(fd, sizeof(*s->state)))
-            goto err;
+            ERROR_OUT("ftruncate");
         else
             flash_device = 1;
     }
@@ -219,7 +233,7 @@ static int usb_avrk_initfn(USBDevice *dev)
     s->state = mmap(NULL, sizeof(*s->state),
             PROT_WRITE|PROT_READ, MAP_SHARED, fd, 0);
     if (s->state == MAP_FAILED)
-        goto err;
+        ERROR_OUT("mmap");
 
     close(fd);
     if (flash_device) {
@@ -238,10 +252,7 @@ static int usb_avrk_initfn(USBDevice *dev)
         usb_device_attach(dev);
     }
     return 0;
-err:
-    close(fd);
-    error_report("%s", strerror(errno));
-    return -1;
+#undef ERROR_OUT
 }
 
 static void usb_avrk_handle_destroy(USBDevice *dev)
@@ -290,6 +301,7 @@ static const TypeInfo avrk_info = {
 
 static void usb_avrk_register_types(void)
 {
+    current_dir = get_current_dir_name();
     type_register_static(&avrk_info);
     usb_legacy_register("usb-avrk", "avrk", usb_avrk_init);
 }
