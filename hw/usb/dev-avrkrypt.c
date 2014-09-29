@@ -20,6 +20,7 @@
 #include <sys/mman.h>
 
 static const char *current_dir;
+static size_t current_dir_length;
 
 
 #define VendorOutRequest ((USB_DIR_OUT|USB_TYPE_VENDOR|USB_RECIP_DEVICE)<<8)
@@ -210,12 +211,22 @@ static int usb_avrk_initfn(USBDevice *dev)
     if (!s->filename)
         s->filename = default_filename;
 
-    if (chdir(current_dir))
-        ERROR_REPORT("chdir");
+    char *filename;
+    if (s->filename[0] == '/')
+        filename = s->filename;
+    else {
+        int filename_length = strlen(s->filename);
+        filename = malloc(current_dir_length + filename_length + 2);
+        if (filename == NULL)
+            ERROR_REPORT("malloc");
+        memcpy(filename, current_dir, current_dir_length);
+        filename[current_dir_length] = '/';
+        memcpy(filename + current_dir_length + 1, s->filename, filename_length + 1);
+    }
 
-    int fd = open(s->filename, O_RDWR | O_CREAT, 0644);
-    if (chdir("/"))
-        ERROR_REPORT("chdir");
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    if (filename != s->filename)
+        free(filename);
     if (fd == -1) {
         ERROR_REPORT("open");
     }
@@ -302,6 +313,7 @@ static const TypeInfo avrk_info = {
 static void usb_avrk_register_types(void)
 {
     current_dir = get_current_dir_name();
+    current_dir_length = strlen(current_dir);
     type_register_static(&avrk_info);
     usb_legacy_register("usb-avrk", "avrk", usb_avrk_init);
 }
