@@ -18,7 +18,7 @@ the x86_64 target.
     cd qemu-usb-avrk/
     git submodule update --init
 
-### Download the tarball and apply this patch
+### Download the tarball and apply this patch (faster)
 
     wget http://wiki.qemu-project.org/download/qemu-1.5.3.tar.bz2
     tar xvf  qemu-1.5.3.tar.bz2
