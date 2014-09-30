@@ -12,9 +12,18 @@ the x86_64 target.
 
 ## Patch
 
-Do not clone this repo directly, download the official qemu source tarball from
-[qemu-1.5.3.tar.bz2](http://wiki.qemu-project.org/download/qemu-1.5.3.tar.bz2),
-then apply [this patch](https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff)
+### Get the original source as well as the patch
+
+    git clone git@github.com:suxue/qemu-usb-avrk.git
+    cd qemu-usb-avrk/
+    git submodule update --init
+
+### Download the tarball and apply this patch
+
+    wget http://wiki.qemu-project.org/download/qemu-1.5.3.tar.bz2
+    tar xvf  qemu-1.5.3.tar.bz2
+    cd qemu-1.5.3/
+    wget https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff -O - | patch -Np1
 
 ## Compile qemu
 
