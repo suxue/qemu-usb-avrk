@@ -1,6 +1,6 @@
 ## License
 
-`dev-avrkrypt.c` is released under GPL, same as the original qemu.
+`dev-avrkrypt.c` is released under the LGPL.
 
 `aes.c` and `aes.h` are verbatim copies from https://github.com/kokke/tiny-AES128-C,
 which are in public domain.
@@ -39,6 +39,7 @@ libusb, pciutils, usbutils...) rootfs image.
     cd image/
     ./spawn.sh # this will spawn a screen session (virtual console and qemu monitor), or
     ./boot.sh SERIAL=stdio # the console of qemu will be connected to stdio
+    ./ssh.sh 'zcat /proc/config.gz' > config # download the kernel configuration
 
 ## Usage
 
