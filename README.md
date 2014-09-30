@@ -12,8 +12,9 @@ the x86_64 target.
 
 ## Patch
 
-To get the patch, visit
-https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff
+Do not clone this repo directly, download the official qemu source tarball from
+[qemu-1.5.3.tar.bz2](http://wiki.qemu-project.org/download/qemu-1.5.3.tar.bz2),
+then apply [this patch](https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff)
 
 ## Compile qemu
 
@@ -22,7 +23,8 @@ http://www.linuxfromscratch.org/blfs/downloads/7.4/BLFS-BOOK-7.4-nochunks.html#q
 ## Get a usable image
 
 People do not have enough time to build their own qemu image may want to try mine,
-which includes all auxiliary scripts and a small (20Mb) rootfs image.
+which includes all auxiliary scripts and a small (20Mb, with glibc-2.20,
+libusb, pciutils, usbutils...) rootfs image.
 
     git clone https://gist.github.com/dade5b978b276e290512.git image/
     cd image/
