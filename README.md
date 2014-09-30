@@ -1,15 +1,33 @@
 ## License
 
-All additional files are released under GPL, same as the original qemu.
+`dev-avrkrypt.c` is released under GPL, same as the original qemu.
+
+`aes.c` and `aes.h` are verbatim copies from https://github.com/kokke/tiny-AES128-C,
+which are in public domain.
 
 ## Aim
 
-We add a virtual usb avr aes128 encryption device against qemu v1.5.3,
+We add a virtual usb avr aes128 encryption device against qemu v1.5.3 with
+the x86_64 target.
 
 ## Patch
 
 To get the patch, visit
 https://github.com/suxue/qemu-usb-avrk/compare/suxue:v1.5.3...usb-avrk.diff
+
+## Compile qemu
+
+http://www.linuxfromscratch.org/blfs/downloads/7.4/BLFS-BOOK-7.4-nochunks.html#qemu
+
+## Get a usable image
+
+People do not have enough time to build their own qemu image may want to try mine,
+which includes all auxiliary scripts and a small (20Mb) rootfs image.
+
+    git clone https://gist.github.com/dade5b978b276e290512.git image/
+    cd image/
+    ./spawn.sh # this will spawn a screen session (virtual console and qemu monitor), or
+    ./boot.sh SERIAL=stdio # the console of qemu will be connected to stdio
 
 ## Usage
 
